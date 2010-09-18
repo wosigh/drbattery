@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=de.somline.drbattery
+Exec=/var/usr/sbin/de.somline.drbattery

@@ -1,0 +1,14 @@
+{
+  "role": {
+     "exeName":"/var/usr/sbin/de.somline.drbattery",
+     "type": "regular",
+     "allowedNames": ["de.somline.drbattery"]
+  },
+  "permissions": [
+    {
+      "service":"de.somline.drbattery",
+      "inbound":["*"],
+      "outbound":["*"]
+    }
+  ]
+}

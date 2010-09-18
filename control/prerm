@@ -1,0 +1,33 @@
+#!/bin/sh
+
+PID="de.somline.drbattery"
+SID="de.somline.drbattery"
+
+# Handle execution as pmPreRemove.script
+if [ -z "$IPKG_OFFLINE_ROOT" ]; then
+  IPKG_OFFLINE_ROOT=/media/cryptofs/apps
+  mount -o remount,rw /
+fi
+
+APPS=/media/cryptofs/apps
+
+[ -d $APPS ] || { echo "Requires webOS 1.3.5 or later" ; exit 1 ; }
+
+# Only remove the service
+if [ -f ${APPS}/usr/palm/applications/de.somline.drbattery/appinfo.json ] ; then
+
+  # Remove the ipkgservice executable
+  rm -f /var/usr/sbin/${SID}
+
+  # Remove the dbus service
+  rm -f /usr/share/dbus-1/system-services/${SID}.service /var/palm/system-services/${SID}.service
+
+  /sbin/stop ${SID} || true
+  /usr/bin/killall -9 ${SID} || true
+
+  # Remove the upstart script
+  rm -f /etc/event.d/${SID} /var/palm/event.d/${SID}
+
+fi
+
+exit 0

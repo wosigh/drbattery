@@ -1,0 +1,36 @@
+[
+    {"source": "app/assistants/stage-assistant.js"},
+    {"source": "app/assistants/messages-assistant.js"},
+    {
+        "scenes": "actual",
+        "source": "app/assistants/actual-assistant.js"
+    },
+    {
+        "scenes": "health",
+        "source": "app/assistants/health-assistant.js"
+    },
+    {
+        "scenes": "calibrate",
+        "source": "app/assistants/calibrate-assistant.js"
+    },
+    {
+        "scenes": "advanced",
+        "source": "app/assistants/advanced-assistant.js"
+    },
+    {
+        "scenes": "messages",
+        "source": "app/assistants/messages-assistant.js"
+    },
+    {
+        "scenes": "help",
+        "source": "app/assistants/help-assistant.js"
+    },
+    {
+        "scenes": "info",
+        "source": "app/assistants/info-assistant.js"
+    },
+    {
+        "scenes": "popup",
+        "source": "app/assistants/popup-assistant.js"
+    }
+]

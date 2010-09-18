@@ -1,0 +1,7 @@
+description "Dr.Battery Service"
+
+start on stopped finish
+
+exec /var/usr/sbin/de.somline.drbattery
+
+respawn

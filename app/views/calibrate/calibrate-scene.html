@@ -1,0 +1,133 @@
+<!--
+<div class="palm-page-header multi-line">
+	<div class="palm-page-header-wrapper">
+    	<div id="appIcon" class="prog_icon"></div> 
+		<div class="title main">
+			<span id="main-title">Dr. Battery</span>
+			<span class="version" id="version">v0.0.0</span>
+		</div>
+	</div>
+</div>
+-->
+<div class="palm-header-spacer-new"></div>
+<div class="palm-group">
+	<div class="palm-group-title">
+		<span x-mojo-loc="">Battery Calibration</span>
+	</div>
+	<div class="palm-list">
+		<div class='palm-row first' id="battery_img_row">
+			<div class="palm-row-wrapper" >
+				<table class=tblbatteryicon >
+					<tr >
+                    	<td rowspan=2 width=50% align="center" valign="middle">
+                        	<img id="battery_icon" src="images/drbattery_empty_120x120.png" ></img>
+                         </td>                                                                         
+                         	<td width=50% align="left" valign="bottom">                                 
+                            <div class="battery_percentage" id="battery_percentage"></div>        
+                         </td>                                                                         
+                    </tr>                                                                                 
+                    <tr >                                                                                 
+                    	<td width=50% align="left" valign="middle">                                    
+                        		<div class="txt_charge_status" id="charge_status"></div>                                        
+                        </td>                                                                         
+                    </tr>                                                                                 
+				</table>
+			</div>
+		</div>
+		<div class='palm-row'>
+			<div class="palm-row-wrapper" >
+				<div id="info_text" class="info_text"></div>		
+			</div>
+		</div>
+		<div class='palm-row'>
+			<div class="palm-row-wrapper">
+				<table class=tblmonitor >
+					<tr >
+				  		<td width=19% align="left" valign="middle">
+				  			<div id="monitorheader">Volt.[V]</div>
+				  		</td>
+				  		<td width=27% align="center" valign="middle">
+							<div id="monitorheader">Curr.[mA]</div>
+				  		</td>
+				  		<td width=27% align="center" valign="middle">
+				  			<div id="monitorheader">Temp.[&deg;C]</div>
+				  		</td>
+				  		<td width=27% align="right" valign="middle">
+				  			<div id="monitorheader">Capa.[mAh]</div>
+				  		</td>
+				 	</tr>
+					<tr >
+				  		<td width=19% align="left" valign="middle">
+							<div id="getvoltage" ></div>
+				  		</td>
+				  		<td width=27% align="center" valign="middle">
+							<div id="getcurrent" ></div>
+				  		</td>
+				  		<td width=27% align="center" valign="middle">
+							<div id="gettemp" ></div>
+				  		</td>
+				  		<td width=27% align="right" valign="middle">
+							<div id="getcoulomb" ></div>
+				  		</td>
+				 	</tr>
+				</table>				
+			</div>
+		</div>
+		<div class='palm-row last'>
+			<div class="palm-row-wrapper">
+				<div id="stats_flags"></div>
+				<table class=tblstatusleds >
+                   	<td colspan=6 width=100% align="center" valign="middle">
+                        	<div id="register_header">Battery Status Register</img>
+                         </td>                                                                         
+					<tr >
+				  		<td width=16% align="center" valign="middle">
+				  			<div id="ledheader">CHGTF</div>
+				  		</td>
+				  		<td width=16% align="center" valign="middle">
+							<div id="ledheader">AEF</div>
+				  		</td>
+				  		<td width=16% align="center" valign="middle">
+				  			<div id="ledheader">SEF</div>
+				  		</td>
+				  		<td width=16% align="center" valign="middle">
+							<div id="ledheader">LEARNF</div>
+				  		</td>
+				  		<td width=16% align="center" valign="middle">
+				  			<div id="ledheader">UVF</div>
+				  		</td>
+				  		<td width=16% align="center" valign="middle">
+							<div id="ledheader">PORF</div>
+				  		</td>
+				 	</tr>
+					<tr >
+				  		<td width=16% align="center" valign="middle">
+				  			<img class="cls_led" id="CHGTF"  src="images/led_gray.png" no-repeat center</img>
+				  		</td>
+				  		<td width=16% align="center" valign="middle">
+							<img class="cls_led" id="AEF"    src="images/led_gray.png" no-repeat center</img>
+				  		</td>
+				  		<td width=16% align="center" valign="middle">
+				  			<img class="cls_led" id="SEF"    src="images/led_gray.png" no-repeat center</img>
+				  		</td>
+				  		<td width=16% align="center" valign="middle">
+							<img class="cls_led" id="LEARNF" src="images/led_gray.png" no-repeat center</img>
+				  		</td>
+				  		<td width=16% align="center" valign="middle">
+				  			<img class="cls_led" id="UVF"    src="images/led_gray.png" no-repeat center</img>
+				  		</td>
+				  		<td width=16% align="center" valign="middle">
+							<img class="cls_led" id="PORF"   src="images/led_gray.png" no-repeat center</img>
+				  		</td>
+				 	</tr>
+				</table>				
+			</div>
+		</div>
+	</div>
+</div>
+<div class="palm-body-text">
+	<div id="botton_space"></dev>
+	<div id="message"></div>
+</div>
+<div class="botton_space">
+</dev>

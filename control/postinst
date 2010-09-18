@@ -1,0 +1,67 @@
+#!/bin/sh                                                                                       
+
+PID="de.somline.drbattery"
+SID="de.somline.drbattery"
+
+# Handle execution as pmPostInstall.script
+if [ -z "$IPKG_OFFLINE_ROOT" ]; then
+  IPKG_OFFLINE_ROOT=/media/cryptofs/apps
+  mount -o remount,rw /
+fi
+
+APPS=/media/cryptofs/apps
+
+[ -d $APPS ] || { echo "Requires webOS 1.3.5 or later" ; exit 1 ; }
+
+# Remove the obsolete Dr.Battery Service
+if [ -f $APPS/usr/lib/ipkg/info/de.somline.drbatterysrv.prerm ] ; then
+  IPKG_OFFLINE_ROOT=$APPS sh $APPS/usr/lib/ipkg/info/de.somline.drbatterysrv.prerm || true
+fi
+/usr/bin/ipkg -o $APPS -force-depends remove de.somline.drbatterysrv || true
+
+# Remove remaining dir if exting
+if [ -d $APPS/usr/palm/applications/de.somline.drbatterysrv ] ; then
+  rm -f $APPS/usr/palm/applications/de.somline.drbatterysrv || true
+fi
+
+# Remove the drbattery executable
+rm -f /var/usr/sbin/${SID}
+
+# Remove the dbus service
+rm -f /usr/share/dbus-1/system-services/${SID}.service /var/palm/system-services/${SID}.service
+
+# Stop the service if running
+/sbin/stop ${SID} || true
+/usr/bin/killall -9 ${SID} || true
+
+# Remove the upstart script
+rm -f /etc/event.d/${SID} /var/palm/event.d/${SID}
+
+# Install the drbattery executable
+mkdir -p /var/usr/sbin/
+install -m 755 $APPS/usr/palm/applications/${PID}/bin/${SID} /var/usr/sbin/${SID}
+
+# Install the dbus service
+if [ -d /var/palm/system-services ] ; then
+  cp $APPS/usr/palm/applications/${PID}/dbus/${SID}.service /var/palm/system-services/${SID}.service
+else
+  cp $APPS/usr/palm/applications/${PID}/dbus/${SID}.service /usr/share/dbus-1/system-services/${SID}.service
+fi
+
+# Install the upstart script
+if [ -d /var/palm/event.d ] ; then
+  cp $APPS/usr/palm/applications/${PID}/upstart/${SID} /var/palm/event.d/${SID}
+else
+  cp $APPS/usr/palm/applications/${PID}/upstart/${SID} /etc/event.d/${SID}
+fi
+
+# Start the service
+/sbin/start ${SID}
+
+# Check the upstart script is installed
+[ -f /var/palm/event.d/${SID} ] || [ -f /etc/event.d/${SID} ] || exit 1
+
+# Check the dbus service is installed
+[ -f /var/palm/system-services/${SID}.service ] || [ -f /usr/share/dbus-1/system-services/${SID}.service ] || exit 1
+
+exit 0

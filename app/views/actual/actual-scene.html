@@ -1,0 +1,104 @@
+<div class="palm-header-spacer-new"></div>
+<div class="palm-group">
+	<div class="palm-group-title">
+		<span x-mojo-loc="">Battery State</span>
+	</div>
+	<div class="palm-list">
+		<div class='palm-row first' id="battery_img_row">
+			<div class="palm-row-wrapper" >
+				<table class=tblbatteryicon >
+					<tr >
+				  		<td width=50% align="center" valign="middle">
+				  			<img id="battery_icon" src="images/drbattery_empty_72x72.png" no-repeat center</img>
+				  		</td>
+				  		<td width=50% align="center" valign="middle">
+							<div id="battery_percentage"></div>
+				  		</td>
+				 	</tr>
+				</table>
+			</div>
+		</div>
+<!--		
+		<div class='palm-row'>
+			<div class="palm-row-wrapper">
+				<div class="label left">Capacity Left</div>
+				<div id="getrawcoulomb" class="title right"></div>
+			</div>
+		</div>
+		<div class='palm-row'>
+			<div class="palm-row-wrapper">
+				<div class="label left">Temperatur</div>
+				<div id="gettemp" class="title right"></div>
+			</div>
+		</div>
+-->
+		<div class='palm-row' id="row_monitor">
+			<div class="palm-row-wrapper">
+				<table class=tblactmonitor >
+					<tr >
+				  		<td width=50% align="left" valign="middle">
+				  			<div class="head_actmonitor" id="head_actmonitor">Capacity left</div>
+				  		</td>
+				  		<td width=50% align="left" valign="middle">
+							<div class="head_actmonitor" id="head_actmonitor">Temperature</div>
+				  		</td>
+				 	</tr>
+					<tr >
+				  		<td width=50% align="left" valign="middle">
+							<div class="txt_actmonitor" id="getcoulomb" ></div>
+				  		</td>
+				  		<td width=50% align="left" valign="middle">
+							<div class="txt_actmonitor" id="gettemp" ></div>
+				  		</td>
+				 	</tr>
+				</table>				
+			</div>
+		</div>
+
+
+		<div class='palm-row last' id="row_monitor">
+			<div class="palm-row-wrapper">
+				<table class="tblactmonitor" >
+					<tr >
+				  		<td width=50% align="left" valign="middle">
+				  			<div class="head_actmonitor" id="head_actmonitor">Voltage</div>
+				  		</td>
+				  		<td width=50% align="left" valign="middle">
+							<div  class="head_actmonitor" id="head_actmonitor">Current</div>
+				  		</td>
+				 	</tr>
+					<tr >
+				  		<td width=50% align="left" valign="middle">
+							<div class="txt_actmonitor" id="getvoltage" ></div>
+				  		</td>
+				  		<td width=50% align="left" valign="middle">
+							<div class="txt_actmonitor" id="getavgcurrent" ></div>
+				  		</td>
+				 	</tr>
+				</table>				
+			</div>
+		</div>
+
+<!--		
+		<div class='palm-row'>
+			<div class="palm-row-wrapper">
+				<div class="label left">Voltage</div>
+				<div id="getvoltage" class="title right"></div>
+			</div>
+		</div>
+		<div class='palm-row last'>
+			<div class="palm-row-wrapper">
+				<div class="label left">Current</div>
+				<div id="getcurrent" class="title right"></div>
+			</div>
+		</div>
+-->
+	</div>
+</div>
+<div class="palm-body-text">
+	<div id="botton_space"></dev>
+	<div id="message"></div>
+</div>
+<div class="botton_space">
+</dev>
+

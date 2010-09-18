@@ -1,0 +1,28 @@
+{
+	"id": "de.somline.drbattery",
+	"version": "0.1.2",
+	"vendor": "somline",
+	"type": "web",
+	"main": "index.html",
+	"title": "Dr. Battery",
+	"icon": "icon_drbattery.png",
+	"release_date": "19-Sept-2010",
+	"vendor_email": "drbattery@somline.de",
+	"copyright": "&copy; Copyright 2010, somline",
+	"theme": "dark",
+	"support": {
+		"resources": [
+			{
+				"type": "web",
+				"label": "Forum Thread",
+				"url": "http://m.forums.precentral.net/palm-pre/256967-find-out-how-good-bad-your-battery.html"
+			},
+			{
+				"type": "web",
+				"label": "Forum Support",
+				"url": "http://m.forums.precentral.net/homebrew-apps/260947-dr-battery.html"
+			}
+		]
+	},
+	"vendor_url": "http://m.forums.precentral.net/members/somline.html"
+}
