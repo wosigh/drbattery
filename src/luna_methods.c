@@ -37,6 +37,8 @@
 #define W1_MASTER_SLAVE_COUNT_FILE	"w1_master_slave_count"
 #define DUMPREG_FILE				"/dumpreg"
 #define SETREG_FILE					"/setreg"
+#define STOP_CMD					"/sbin/stop powerd 2>&1"
+#define START_CMD					"/sbin/start powerd 2>&1"
 
 #define SIGN_EXTEND16(x)		(((long)(x))-(((x)&0x8000)?65536:0))
 #define CURRENT_VALUE(x,rsense)	((SIGN_EXTEND16(x)*3125)/2/rsense) // in uA 
@@ -85,7 +87,10 @@
 #define UVF    0x04
 #define PORF   0x02
 
+#define ACR_MSB_REGISTER		0x10
+#define ACR_LSB_REGISTER		0x11
 #define AGE_REGISTER			0x14
+#define IMIN_REGISTER			0x65
 #define VAE_REGISTER			0x66
 #define Full40MSB_REGISTER		0x6a  
 #define Full40LSB_REGISTER		0x6b
@@ -141,6 +146,8 @@ static struct structMemoryMap MemoryMap;
 // We use static buffers instead of continually allocating and deallocating stuff,
 // since we're a long-running service, and do not want to leak anything.
 //
+static char buffer[MAXBUFLEN];
+static char run_command_buffer[MAXBUFLEN];
 //static char buffer[MAXBUFLEN];
 static char esc_buffer[MAXBUFLEN];
 //static char run_command_buffer[MAXBUFLEN];
@@ -300,6 +307,171 @@ typedef bool (*subscribefun)(char *);
 //
 static bool passthrough(char *message) {
   return true;
+}
+//
+// Run a shell command, and return the output in-line in a buffer for returning to webOS.
+// If lshandle, message and subscriber are defined, then also send back status messages.
+// The global run_command_buffer must be initialised before calling this function.
+// The return value says whether the command executed successfully or not.
+//
+static bool run_command(char *command, bool escape) {
+	LSError lserror;
+	LSErrorInit(&lserror);
+	
+	// Local buffers to store the current and previous lines.
+	char line[MAXLINLEN];
+	
+	fprintf(stderr, "Running command %s\n", command);
+	
+	// run_command_buffer is assumed to be initialised, ready for strcat to append.
+	
+	// Is this the first line of output?
+	bool first = true;
+	
+	bool array = false;
+	
+	// Start execution of the command, and read the output.
+	FILE *fp = popen(command, "r");
+	
+	// Return immediately if we cannot even start the command.
+	if (!fp) {
+		return false;
+	}
+	
+	// Loop through the output lines
+	while (fgets(line, sizeof line, fp)) {
+		
+		// Chomp the newline
+		char *nl = strchr(line,'\n'); if (nl) *nl = 0;
+		
+		// Add formatting breaks between lines
+		if (first) {
+			if (run_command_buffer[strlen(run_command_buffer)-1] == '[') {
+				array = true;
+			}
+			first = false;
+		}
+		else {
+			if (array) {
+				strcat(run_command_buffer, ", ");
+			}
+			else {
+				strcat(run_command_buffer, "<br>");
+			}
+		}
+		
+		// Append the unfiltered output to the run_command_buffer.
+		if (escape) {
+			if (array) {
+				strcat(run_command_buffer, "\"");
+			}
+			strcat(run_command_buffer, json_escape_str(line));
+			if (array) {
+				strcat(run_command_buffer, "\"");
+			}
+		}
+		else {
+			strcat(run_command_buffer, line);
+		}
+	}
+	
+	// Check the close status of the process
+	if (pclose(fp)) {
+		return false;
+	}
+	
+	return true;
+error:
+	LSErrorPrint(&lserror, stderr);
+	LSErrorFree(&lserror);
+end:
+	// %%% We need a way to distinguish command failures from LSMessage failures %%%
+	// %%% This may need to be true if we just want to ignore LSMessage failures %%%
+	return false;
+}
+
+//
+// Send a standard format command failure message back to webOS.
+// The command will be escaped.  The output argument should be a JSON array and is not escaped.
+// The additional text  will not be escaped.
+// The return value is from the LSMessageReply call, not related to the command execution.
+//
+static bool report_command_failure(LSHandle* lshandle, LSMessage *message, char *command, char *stdErrText, char *additional) {
+	LSError lserror;
+	LSErrorInit(&lserror);
+	
+	// Include the command that was executed, in escaped form.
+	snprintf(buffer, MAXBUFLEN,
+			 "{\"errorText\": \"Unable to run command: %s\"",
+			 json_escape_str(command));
+	
+	// Include any stderr fields from the command.
+	if (stdErrText) {
+		strcat(buffer, ", \"stdErr\": ");
+		strcat(buffer, stdErrText);
+	}
+	
+	// Report that an error occurred.
+	strcat(buffer, ", \"returnValue\": false, \"errorCode\": -1");
+	
+	// Add any additional JSON fields.
+	if (additional) {
+		strcat(buffer, ", ");
+		strcat(buffer, additional);
+	}
+	
+	// Terminate the JSON reply message ...
+	strcat(buffer, "}");
+	
+	fprintf(stderr, "Message is %s\n", buffer);
+	
+	// and send it.
+	if (!LSMessageReply(lshandle, message, buffer, &lserror)) goto error;
+	
+	return true;
+error:
+	LSErrorPrint(&lserror, stderr);
+	LSErrorFree(&lserror);
+end:
+	return false;
+}
+
+//
+// Run a simple shell command, and return the output to webOS.
+//
+static bool simple_command(LSHandle* lshandle, LSMessage *message, char *command) {
+	LSError lserror;
+	LSErrorInit(&lserror);
+	
+	// Initialise the output buffer
+	strcpy(run_command_buffer, "{\"stdOut\": [");
+	
+	// Run the command
+	if (run_command(command, true)) {
+		
+		// Finalise the message ...
+		strcat(run_command_buffer, "], \"returnValue\": true}");
+		
+		fprintf(stderr, "Message is %s\n", run_command_buffer);
+		
+		// and send it to webOS.
+		if (!LSMessageReply(lshandle, message, run_command_buffer, &lserror)) goto error;
+	}
+	else {
+		
+		// Finalise the command output ...
+		strcat(run_command_buffer, "]");
+		
+		// and use it in a failure report message.
+		if (!report_command_failure(lshandle, message, command, run_command_buffer+11, NULL)) goto end;
+	}
+	
+	return true;
+error:
+	LSErrorPrint(&lserror, stderr);
+	LSErrorFree(&lserror);
+end:
+	return false;
 }
 
 static bool read_first_line_from_textfile(char *filename) {
@@ -476,6 +648,42 @@ bool read_battery(){
 	return true;
 }
 
+bool PowerdCmd_method(LSHandle* lshandle, LSMessage *message, void *ctx) {
+	LSError lserror;
+	LSErrorInit(&lserror);
+/*
+ json_t *object = json_parse_document(LSMessageGetPayload(message));
+ json_t *percentage = json_find_first_label(object, "percentage");               
+ if (!percentage || (percentage->child->type != JSON_NUMBER) ) {
+
+ */
+	json_t *object = json_parse_document(LSMessageGetPayload(message));
+	json_t *cmd = json_find_first_label(object, "cmd");               
+	if (!cmd || ( (strcmp(cmd->child->text,"stop")!= 0) && (strcmp(cmd->child->text,"start")!= 0)) ) {
+		if (!LSMessageReply(lshandle, message,
+							"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Invalid or missing command\"}",
+							&lserror)) goto error;
+		return true;
+	}
+	
+	// Local buffer to store the update command
+	char command[MAXLINLEN];
+	
+	if (strcmp(cmd->child->text,"stop")== 0) {
+		sprintf(command, "%s", STOP_CMD);
+	} else {
+		sprintf(command, "%s", START_CMD);
+	}
+	
+	return simple_command(lshandle, message, command);
+	
+error:
+	LSErrorPrint(&lserror, stderr);
+	LSErrorFree(&lserror);
+end:
+	return false;
+}
+
 bool ReadBatteryShort_method(LSHandle* lshandle, LSMessage *message, void *ctx) {
 	LSError lserror;
 	LSErrorInit(&lserror);
@@ -536,7 +744,7 @@ bool SetBatteryAGE_method(LSHandle* lshandle, LSMessage *message, void *ctx) {
 	LSError lserror;
 	LSErrorInit(&lserror);
 
-	json_t *object = LSMessageGetPayloadJSON(message);
+	json_t *object = json_parse_document(LSMessageGetPayload(message));
 	json_t *percentage = json_find_first_label(object, "percentage");               
 	if (!percentage || (percentage->child->type != JSON_NUMBER) ) {
 		if (!LSMessageReply(lshandle, message,
@@ -607,8 +815,9 @@ bool SetBatteryFULL40_method(LSHandle* lshandle, LSMessage *message, void *ctx) 
 	LSError lserror;
 	LSErrorInit(&lserror);
 	
-	json_t *object = LSMessageGetPayloadJSON(message);
-	json_t *capacity = json_find_first_label(object, "capacity");               
+	json_t *object = json_parse_document(LSMessageGetPayload(message));
+	json_t *capacity = json_find_first_label(object, "capacity");   
+	
 	if (!capacity || (capacity->child->type != JSON_NUMBER) ) {
 		if (!LSMessageReply(lshandle, message,
 							"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Invalid or missing capacity\"}",
@@ -658,7 +867,7 @@ bool SetBatteryRegister_method(LSHandle* lshandle, LSMessage *message, void *ctx
 	LSError lserror;
 	LSErrorInit(&lserror);
 	
-	json_t *object = LSMessageGetPayloadJSON(message);
+	json_t *object = json_parse_document(LSMessageGetPayload(message));
 	json_t *name = json_find_first_label(object, "name");               
 	if (!name || (name->child->type != JSON_STRING) || (strspn(name->child->text, ALLOWED_CHARS) != strlen(name->child->text))) {
 		if (!LSMessageReply(lshandle, message,
@@ -677,11 +886,12 @@ bool SetBatteryRegister_method(LSHandle* lshandle, LSMessage *message, void *ctx
 		if (!LSMessageReply(lshandle, message, error_file_buffer,&lserror)) goto error;
 		return true;
 	}
-	if (strcmp(value->child->text,"VAE")){
+
+	if (strcmp(name->child->text,"VAE") == 0){
 		int iValue = (int)strtol(value->child->text,NULL,10);
 		//int iAge = (int)percentage->child->text;
 		
-		if (iValue < 3393) {
+		if (iValue < 2000) {
 			sprintf(error_file_buffer,"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Invalid VAE Value %d\"}",iValue);
 			if (!LSMessageReply(lshandle, message,
 								error_file_buffer,
@@ -697,9 +907,59 @@ bool SetBatteryRegister_method(LSHandle* lshandle, LSMessage *message, void *ctx
 			if (!LSMessageReply(lshandle, message, error_file_buffer , &lserror)) goto error;
 			return true;
 		}
-	} else {
+	} else if (strcmp(name->child->text,"ACR")==0){
+		/* Set the ACR Registers */
+		int iValue = (int)strtol(value->child->text,NULL,10);
+		if ((iValue < 0) || (iValue > 5000)) {
+			sprintf(error_file_buffer,"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Invalid ACR Value %d\"}",iValue);
+			if (!LSMessageReply(lshandle, message,
+								error_file_buffer,
+								&lserror)) goto error;
+			return true;
+		}
+		
+		int iACR = (int)((long)iValue * 3.2L);
+		int iLSB = iACR & 0xFF;
+		int iMSB = (iACR >> 8) & 0xFF;
+
+		if (!write_register(ACR_MSB_REGISTER,iMSB)) {
+			if (!LSMessageReply(lshandle, message, error_file_buffer,&lserror)) goto error;
+			return true;
+		}
+		if (!write_register(ACR_LSB_REGISTER,iLSB)) {
+			if (!LSMessageReply(lshandle, message, error_file_buffer,&lserror)) goto error;
+			return true;
+		} else {
+			sprintf(error_file_buffer,
+					"{\"returnValue\": true, \"errorCode\": 0}");
+			if (!LSMessageReply(lshandle, message, error_file_buffer , &lserror)) goto error;
+			return true;
+		}
+	} else if (strcmp(name->child->text,"IMIN")==0){
+		int iValue = (int)strtol(value->child->text,NULL,10);
+		if ((iValue < 0) || (iValue > 100)) {
+			sprintf(error_file_buffer,"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Invalid IMIN Value %d\"}",iValue);
+			if (!LSMessageReply(lshandle, message,
+								error_file_buffer,
+								&lserror)) goto error;
+			return true;
+		}
+		
+		int iIMIN = (int)((long)iValue / (50L/(long)MemoryMap.rsense));
+		
+		if (!write_register(IMIN_REGISTER,iIMIN)) {
+			if (!LSMessageReply(lshandle, message, error_file_buffer,&lserror)) goto error;
+			return true;
+		} else {
+			sprintf(error_file_buffer,
+					"{\"returnValue\": true, \"errorCode\": 0}");
+			if (!LSMessageReply(lshandle, message, error_file_buffer , &lserror)) goto error;
+			return true;
+		}
+		
+	}else {
 		sprintf(error_file_buffer,
-				"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Invalid register %d\"}");
+				"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Invalid register %s\"}",name->child->text);
 		if (!LSMessageReply(lshandle, message, error_file_buffer , &lserror)) goto error;
 		return true;
 	}
@@ -736,6 +996,7 @@ end:
 LSMethod luna_methods[] = {
   { "status",	dummy_method },
   { "version",	version_method },
+  { "PowerdCmd",	PowerdCmd_method },
   { "ReadBatteryHealth",	ReadBatteryHealth_method },
   { "ReadBatteryShort",	ReadBatteryShort_method },
   { "BatteryTest",	BatteryTest_method },
