@@ -20,7 +20,7 @@ fi
 
 # Remove remaining dir if existing
 if [ -d $APPS/usr/palm/applications/de.somline.drbatterysrv ] ; then
-  rm -f $APPS/usr/palm/applications/de.somline.drbatterysrv || true
+  rm -rf $APPS/usr/palm/applications/de.somline.drbatterysrv || true
 fi
 
 # Remove the drbattery executable
