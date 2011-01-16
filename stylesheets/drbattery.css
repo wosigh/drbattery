@@ -331,7 +331,7 @@ color:#AAA;
  	color: red;
  	}
 }
-#info_text {
+.info_text_on {
     font-size: 100%;   
     padding: 0px 5px 0px 5px;
     overflow: hidden;
@@ -343,6 +343,13 @@ color:#AAA;
  -webkit-animation-timing-function: linear;
 }
 
+.info_text_off {
+    font-size: 100%;   
+    padding: 0px 5px 0px 5px;
+    overflow: hidden;
+    text-align: center;
+    color: white;
+}
 
 .top-spacer {
 position:relative;
