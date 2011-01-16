@@ -45,7 +45,8 @@ HelpAssistant.prototype.setup = function()
 	this.supportModel.items.push({
 		text: $L("Support Email"),
 		address: 'drbattery@somline.de',
-		Class: 'img_email',
+		subject: 'Help request',
+        Class: 'img_email',
 		type: 'email'
 	});
 	this.controller.setupWidget
