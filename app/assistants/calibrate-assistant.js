@@ -7,11 +7,15 @@ function CalibrateAssistant(argFromPusher) {
 	   this.IsCalibrating="false";
 	   this.LastNotifyMessage="";
 	   this.IsFirstCall="true";
+       this.Popup="false";
 	   //Hex * 19,5 = mV
 	   //0xae * 19,5 = 3393mV
 	   // 3432 0xb0
 	   this.VAEOrig=3393;
 	   this.VAEValue=3413;
+       this.BumpACR=240;
+       this.PowerdRunning="true";
+       this.VAEStopPowerd=3450 * 1000;
 }
 
 CalibrateAssistant.prototype.setup = function() {
@@ -76,9 +80,12 @@ CalibrateAssistant.prototype.setup = function() {
 	Mojo.Event.listen(this.controller.document, Mojo.Event.stageActivate, CalibrateAssistant.prototype.stageActivate.bind(this));
     this.controller.stageController.setWindowProperties({blockScreenTimeout: true});
 	
-	this.AdjustBatteryRegisterVAE(this.VAEValue,false);	
+	this.AdjustBatteryRegister("VAE",this.VAEValue,false);	
+	//this.AdjustBatteryRegister("VAE",3201,false);	
 	this.ReadBattery();
 	this.updater=setInterval(this.UpdateAll.bind(this),3000);
+    //Mojo.Controller.getAppController().showBanner({messageText: 'new 3'}, {},'');
+
 	
 };
 CalibrateAssistant.prototype.UpdateStatus = function(jsonBatteryStatus) {
@@ -110,18 +117,19 @@ CalibrateAssistant.prototype.UpdateStatus = function(jsonBatteryStatus) {
 		}
 		if (jsonBatteryStatus.LEARNF) {
 			this.LedOn('LEARNF');
-			if ((this.IsCalibrating=="false") && (this.BatteryInfo.getcurrent > 0)) {
-				//this.IsCalibrating="true";
-			}
 			if ((this.IsCalibrating=="false") && (this.BatteryInfo.getcurrent <= 0)) {
 				this.NotifyUser("CalibrationWait");
 				this.IsCalibrating="waiting";
-			}else if (this.IsCalibrating!="waiting"){
+			}else if ((this.IsCalibrating=="waiting") && (this.BatteryInfo.getcurrent > 0)){
 				this.NotifyUser("CalibrationStart");
 				this.IsCalibrating="true";
-			}else if ((this.IsCalibrating!="true") && (this.BatteryInfo.getcurrent > 0)) {
+			}else if (this.BatteryInfo.getcurrent > 0){
 				this.IsCalibrating="true";
-			}
+                this.NotifyUser("Calibration");
+            }
+            /*else if ((this.IsCalibrating!="true") && (this.BatteryInfo.getcurrent > 0)) {
+				this.IsCalibrating="true";
+			}*/
 		}else{
 			this.LedOff('LEARNF');
 			if ((this.IsCalibrating=="true") && (jsonBatteryStatus.CHGTF)) {
@@ -130,7 +138,14 @@ CalibrateAssistant.prototype.UpdateStatus = function(jsonBatteryStatus) {
 			}else if ((this.IsCalibrating=="true")||(this.IsCalibrating=="waiting")){
 				this.NotifyUser("CalibrationFailed");
 				this.IsCalibrating="CalibrationFailed";	
-			}	
+			}//else if (this.BatteryInfo.getcoulomb < 70) {
+                //Mojo.Controller.getAppController().showBanner({messageText: 'ACR bumped'}, {},'');            
+                //this.AdjustBatteryRegister("ACR",this.BumpACR,false);
+                //}
+            //if ((this.BatteryInfo.getvoltage <= this.VAEStopPowerd) && (this.PowerRunning == "true"))
+            //    this.PowerdCmd("stop");
+            //    this.PowerdRunning="false";
+            //}
 		}
 		if (jsonBatteryStatus.UVF) {
 			this.ClearBatteryStatusReg("UVF");
@@ -183,36 +198,50 @@ CalibrateAssistant.prototype.NotifyUser=function(calibratingStatus){
 				this.HidePopUp();
 				strStatus ="charging";
 				$("info_text").update("To start calibration please disconnect charger");
-				if (this.IsFirstCall=="false") {
+				//if (this.IsFirstCall=="false") {
 					//Mojo.Log.error("Notify ShowBanner: " + calibratingStatus + "First: " + this.IsFirstCall);
-					Mojo.Controller.getAppController().showBanner({messageText: 'Please disconnect charger'}, {},'');
-				}
+				//	Mojo.Controller.getAppController().showBanner({messageText: 'Please disconnect charger'}, {},'');
+				//}
 			break;		
 			case "DisCharging":
 				this.HidePopUp();
 				strStatus="discharging";
 				if (this.BatteryInfo != null){
 					$("info_text").update("Waiting for battery enter calibration mode at " + (this.BatteryInfo.VAE/1000).toFixed(3) + "V");
-				}
-				if (this.IsFirstCall=="false") {
-					this.HidePopUp();
+				} else {
+                    this.LastNotifyMessage="";
+                }
+				//if (this.IsFirstCall=="false") {
 					//Mojo.Log.error("Notify ShowBanner: " + calibratingStatus + "First: " + this.IsFirstCall);
-					Mojo.Controller.getAppController().showBanner({messageText: 'Waiting for battery calibration mode'}, {},'');
-				}
+				//	Mojo.Controller.getAppController().showBanner({messageText: 'Waiting for battery calibration mode'}, {},'');
+				//}
 			break;		
 			case "CalibrationWait":
+                this.updater=setInterval(this.UpdateAll.bind(this),5000);
 				strStatus="wait for charger";
+                $("info_text").className="info_text_off";
 				$("info_text").update("Connect charger NOW!");
 				this.ShowPopUp("Connect charger NOW!");
-				Mojo.Controller.getAppController().showBanner({messageText: "Connect charger NOW!", soundClass: 'alerts'}, {},'');
+				//Mojo.Controller.getAppController().showBanner({messageText: "Connect charger NOW!", soundClass: 'alerts'}, {},'');
 			break;		
 			case "CalibrationStart":
 				this.HidePopUp();
-				strStatus="calibrating";
+                this.updater=setInterval(this.UpdateAll.bind(this),3000);
+				$("info_text").className="info_text_on";
+                strStatus="calibrating";
 				$("info_text").update("Don't disconnect charger!");
-				if (this.IsFirstCall=="false") {
-					Mojo.Controller.getAppController().showBanner({messageText: "Don't disconnect charger!", soundClass: 'alerts'}, {},'');
-				}
+				//if (this.IsFirstCall=="false") {
+				//	Mojo.Controller.getAppController().showBanner({messageText: "Don't disconnect charger!", soundClass: 'alerts'}, {},'');
+				//}
+			break;		
+			case "Calibration":
+				this.HidePopUp();
+				strStatus="calibrating";
+				$("info_text").className="info_text_on";
+				$("info_text").update("Don't disconnect charger!");
+				//if (this.IsFirstCall=="false") {
+				//	Mojo.Controller.getAppController().showBanner({messageText: "Don't disconnect charger!", soundClass: 'alerts'}, {},'');
+				//}
 			break;		
 			case "CalibrationSuccess": 
 				this.HidePopUp();
@@ -252,7 +281,8 @@ CalibrateAssistant.prototype.UpdateView = function(jsonBatteryInfo) {
 		this.controller.get("getvoltage").update((jsonBatteryInfo.getvoltage / 1000000).toFixed(3));
 		this.controller.get("getcurrent").update((jsonBatteryInfo.getcurrent / 1000).toFixed(1));
 		this.controller.get("getcoulomb").update((jsonBatteryInfo.getcoulomb *1 ).toFixed(1));
-		this.controller.get("gettemp").update(jsonBatteryInfo.gettemp);
+        // Celsius in Fahrenheit = (( TCelsius × 9 ) / 5 ) + 32
+		this.controller.get("gettemp").update(jsonBatteryInfo.gettemp + "/" + ((jsonBatteryInfo.gettemp*9./5.)+32).toFixed(0));
 		if (percent >= 90) {
 			$('battery_icon').setAttribute('src', 'images/drbattery_full_120x120.png');
 		}else if (percent >= 80) {
@@ -309,11 +339,11 @@ CalibrateAssistant.prototype.ClearBatteryStatusReg = function(Register) {
 	}	
 }
 
-CalibrateAssistant.prototype.AdjustBatteryRegisterVAE = function(value,showsuccess) {
+CalibrateAssistant.prototype.AdjustBatteryRegister = function(register,value,showsuccess) {
 	try{
 		this.controller.serviceRequest('palm://de.somline.drbattery', {
 			method: 'SetBatteryRegister',
-			parameters: {'name':'VAE', 'value':value}, 
+			parameters: {'name':register, 'value':value}, 
 			onSuccess: function(response) {
 				//this.BatteryInfo=response;
 				//this.UpdateView(this.BatteryInfo);
@@ -321,8 +351,8 @@ CalibrateAssistant.prototype.AdjustBatteryRegisterVAE = function(value,showsucce
 				if (showsuccess) {
 		            this.controller.showAlertDialog({
 		                onChoose: function(value) {},
-		                title: $L("Voltage successfully set"),
-		                message: $L("Calibration voltage set to: " + value/1000 + "V"),
+		                title: $L("Register successfully set"),
+		                message: $L(register + " set to: " + value),
 		                choices:[
 		                    {label:$L('OK'), value:"ok", type:'dismiss'}
 		                ]
@@ -335,7 +365,36 @@ CalibrateAssistant.prototype.AdjustBatteryRegisterVAE = function(value,showsucce
 			}.bind(this)
 		});
 	} catch (err) {
-		Mojo.Log.error("CalibrateAssistant.prototype.AdjustBatteryRegisterVAE", err);
+		Mojo.Log.error("CalibrateAssistant.prototype.AdjustBatteryRegister", err);
+		Mojo.Controller.errorDialog(err);
+	}
+}
+
+CalibrateAssistant.prototype.PowerdCmd = function(cmd,showsuccess) {
+	try{
+		this.controller.serviceRequest('palm://de.somline.drbattery', {
+			method: 'PowerdCmd',
+			parameters: {'command':cmd}, 
+			onSuccess: function(response) {
+				Mojo.Controller.getAppController().showBanner("Powerd: " + cmd, "","Information");
+				if (showsuccess) {
+		            this.controller.showAlertDialog({
+		                onChoose: function(value) {},
+		                title: $L("Powerd state successfully"),
+		                message: $L(register + " set to: " + cmd),
+		                choices:[
+		                    {label:$L('OK'), value:"ok", type:'dismiss'}
+		                ]
+		            });
+				}
+			}.bind(this),
+			onFailure: function(err) {
+				Mojo.Log.error(Object.toJSON(err));
+				Mojo.Controller.errorDialog(err.errorText);
+			}.bind(this)
+		});
+	} catch (err) {
+		Mojo.Log.error("CalibrateAssistant.prototype.PowerdCmd", err);
 		Mojo.Controller.errorDialog(err);
 	}
 }
@@ -403,17 +462,19 @@ CalibrateAssistant.prototype.handleCommand = function(event) {
 					this.controller.stageController.pushScene('info',"changelog");		
 				break;
 				case 'vae3413':
-					this.AdjustBatteryRegisterVAE(3413,true);		
+					this.AdjustBatteryRegister("VAE",3413,true);		
 					$("info_text").update("Waiting for battery enter calibration mode at " + (3413/1000).toFixed(3) + "V");
+                    //$("info_text").className="info_text_off";
 					this.appMenuModel.items[1].toggleCmd='vae3413';
 				break;
 				case 'vae3432':
-					this.AdjustBatteryRegisterVAE(3432,true);		
+					this.AdjustBatteryRegister("VAE",3432,true);		
 					$("info_text").update("Waiting for battery enter calibration mode at " + (3432/1000).toFixed(3) + "V");
+                    //$("info_text").className="info_text_on";
 					this.appMenuModel.items[1].toggleCmd='vae3432';
 				break;
 				case 'vae3452':
-					this.AdjustBatteryRegisterVAE(3452,true);		
+					this.AdjustBatteryRegister("VAE",3452,true);		
 					$("info_text").update("Waiting for battery enter calibration mode at " + (3452/1000).toFixed(3) + "V");
 					this.appMenuModel.items[1].toggleCmd='vae3452';
 				break;
@@ -480,6 +541,7 @@ CalibrateAssistant.prototype.ShowPopUp = function(message){
     	stageController.pushScene('popup', message);
 		};
 		appController.createStageWithCallback({name: "popup", lightweight: true, height: 100}, pushPopup, 'popupalert');
+        this.Popup="true";
 		} catch (err) {
 			Mojo.Log.error("CalibrateAssistant.prototype.ShowPopUp", err);
 			Mojo.Controller.errorDialog(err);
@@ -487,7 +549,10 @@ CalibrateAssistant.prototype.ShowPopUp = function(message){
 } 
 CalibrateAssistant.prototype.HidePopUp = function(){
 	try{
-		Mojo.Controller.getAppController().closeStage('popup');
+        if (this.Popup == 'true') {
+            Mojo.Controller.getAppController().closeStage('popup');
+            this.Popup = 'false';
+        }
 		} catch (err) {
 			Mojo.Log.error("CalibrateAssistant.prototype.HidePopUp", err);
 			Mojo.Controller.errorDialog(err);
@@ -535,7 +600,7 @@ CalibrateAssistant.prototype.cleanup = function(event) {
 	   a result of being popped off the scene stack */
 	try{
 	   window.clearInterval(this.updater);
-	   this.AdjustBatteryRegisterVAE(this.VAEOrig,false);	
+	   this.AdjustBatteryRegister("VAE",this.VAEOrig,false);	
 	   this.controller.stageController.setWindowProperties({blockScreenTimeout: false});
 	   Mojo.Event.stopListening(this.controller.document, Mojo.Event.stageActivate, CalibrateAssistant.prototype.stageActivate.bind(this));
 	   Mojo.Event.stopListening(this.controller.document, Mojo.Event.stageDeactivate, CalibrateAssistant.prototype.stageDeactivate.bind(this));
