@@ -113,7 +113,9 @@ ActualAssistant.prototype.UpdateView = function(jsonBatteryInfo) {
 			this.controller.get("battery_percentage").update((age * 1).toFixed(0) + "%");
 			var num=parseFloat(jsonBatteryInfo.getcoulomb);
 			this.controller.get("getcoulomb").update(Math.round(num,2) + " mAh");
-			this.controller.get("gettemp").update(jsonBatteryInfo.gettemp + " &deg;C");
+            var temp=jsonBatteryInfo.gettemp + "&deg;C"
+            temp= temp + " / " + ((jsonBatteryInfo.gettemp*9./5.)+32).toFixed(0) + "&deg;F"
+			this.controller.get("gettemp").update(temp);
 			this.controller.get("getvoltage").update((jsonBatteryInfo.getvoltage / 1000000).toFixed(2) + " V");
 			this.controller.get("getavgcurrent").update((jsonBatteryInfo.getavgcurrent / 1000).toFixed(2) + " mA");
 			if (age >= 90) {
