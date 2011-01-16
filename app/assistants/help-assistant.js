@@ -28,28 +28,26 @@ HelpAssistant.prototype.setup = function()
 		Class: 'img_web',
 		type: 'web'
 	});
-	
+	/*
 	this.supportModel.items.push({
 		text: $L("Background Thread"),
 		detail: 'http://m.forums.precentral.net/palm-pre/256967-find-out-how-good-bad-your-battery.html',
 		Class: 'img_web',
 		type: 'web'
 	});
-	
+	*/
 	this.supportModel.items.push({
 		text: $L("Fuel Gauge IC (PDF)"),
 		detail: 'http://datasheets.maxim-ic.com/en/ds/DS2784.pdf',
 		Class: 'img_web',
 		type: 'web'
 	});
-	/*
 	this.supportModel.items.push({
 		text: $L("Support Email"),
 		address: 'drbattery@somline.de',
 		Class: 'img_email',
 		type: 'email'
 	});
-	*/
 	this.controller.setupWidget
 	(
 		'supportList', 
