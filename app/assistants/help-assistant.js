@@ -43,9 +43,9 @@ HelpAssistant.prototype.setup = function()
 		type: 'web'
 	});
 	this.supportModel.items.push({
-		text: $L("Support Email"),
+		text: $L("Email Support"),
 		address: 'drbattery@somline.de',
-		subject: 'Help request',
+		subject: 'support request',
         Class: 'img_email',
 		type: 'email'
 	});
