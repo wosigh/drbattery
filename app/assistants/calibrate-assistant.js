@@ -217,6 +217,7 @@ CalibrateAssistant.prototype.NotifyUser=function(calibratingStatus){
 				//}
 			break;		
 			case "CalibrationWait":
+                window.clearInterval(this.updater);
                 this.updater=setInterval(this.UpdateAll.bind(this),5000);
 				strStatus="wait for charger";
                 $("info_text").className="info_text_off";
@@ -226,6 +227,7 @@ CalibrateAssistant.prototype.NotifyUser=function(calibratingStatus){
 			break;		
 			case "CalibrationStart":
 				this.HidePopUp();
+                window.clearInterval(this.updater);
                 this.updater=setInterval(this.UpdateAll.bind(this),3000);
 				$("info_text").className="info_text_on";
                 strStatus="calibrating";
