@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <syslog.h>
 
 #include "luna_service.h"
 #include "luna_methods.h"
@@ -31,7 +32,13 @@
 //#define ALLOWED_CHARS "0123456789"
 
 #define API_VERSION "1"
+//Battery/FuelgaugeIC
 
+// A6 interface
+//#define A6_DIR						"/sys_test/class/misc/a6_0/regs/"
+#define A6_DIR						"/sys/class/misc/a6_0/regs/"
+
+// one wire interface
 #define BUSMASTER_DIR				"/sys/devices/w1_bus_master1/"
 #define W1_MASTER_SLAVES_FILE		"w1_master_slaves"
 #define W1_MASTER_SLAVE_COUNT_FILE	"w1_master_slave_count"
@@ -123,6 +130,7 @@ struct structDumpreg {
 static struct structDumpreg Dumpreg;
 
 struct structMemoryMap {
+	char FuelgaugeIC[15];
 	double age;
 	double full40;
 	int rsense;
@@ -141,6 +149,13 @@ struct structMemoryMap {
 	double vae;
 };
 static struct structMemoryMap MemoryMap;
+
+enum FuelgaugeIC_type{
+	MAXIM_DS2784,
+	A6,
+	UNKNOWN
+} ;
+static enum FuelgaugeIC_type FuelgaugeIC;
 
 //
 // We use static buffers instead of continually allocating and deallocating stuff,
@@ -502,20 +517,95 @@ bool InitBatteryDir() {
 		return true; 
 	}
 	char tmp_path[PATH_MAX];
-	strcpy(tmp_path,BUSMASTER_DIR);
-	strcat(tmp_path,W1_MASTER_SLAVES_FILE);
-	if (!read_first_line_from_textfile(tmp_path)) {
-		return false;
+	strcpy(tmp_path,A6_DIR);
+	strcat(tmp_path,"getage");
+	if (read_first_line_from_textfile(tmp_path)) {
+		syslog(LOG_DEBUG, "InitBatteryDir: FuelgaugeIC: A6");
+		FuelgaugeIC=A6;
+		strcpy(MemoryMap.FuelgaugeIC,"A6");
+	} else {
+		strcpy(tmp_path,BUSMASTER_DIR);
+		strcat(tmp_path,W1_MASTER_SLAVES_FILE);
+		if (!read_first_line_from_textfile(tmp_path)) {
+			FuelgaugeIC=UNKNOWN;
+			syslog(LOG_DEBUG, "InitBatteryDir: FuelgaugeIC: UNKNOWN");
+			strcpy(MemoryMap.FuelgaugeIC,"UNKNOWN");
+			return false;
+		}
+		FuelgaugeIC=MAXIM_DS2784;		
+		strcpy(MemoryMap.FuelgaugeIC,"MAXIM_DS2784");
+		syslog(LOG_DEBUG, "InitBatteryDir: FuelgaugeIC: MAXIM_DS2784");
+		strcpy(battery_dumpreg_file,BUSMASTER_DIR);
+		strcat(battery_dumpreg_file,read_file_buffer);
+		strcpy(battery_setreg_file,battery_dumpreg_file);
+		strcat(battery_dumpreg_file,DUMPREG_FILE);
+		strcat(battery_setreg_file,SETREG_FILE);
 	}
-	strcpy(battery_dumpreg_file,BUSMASTER_DIR);
-	strcat(battery_dumpreg_file,read_file_buffer);
-	strcpy(battery_setreg_file,battery_dumpreg_file);
-	strcat(battery_dumpreg_file,DUMPREG_FILE);
-	strcat(battery_setreg_file,SETREG_FILE);
-	
 	//strcpy(battery_setreg_file,"/tmp/setreg");
 	
 	is_initialized = true;
+	return true;
+}
+static bool read_A6_value(char * filename) {
+	char tmp_path[PATH_MAX];
+	strcpy(tmp_path,A6_DIR);
+	strcat(tmp_path,filename);
+	if (!read_first_line_from_textfile(tmp_path)) {
+		sprintf(error_file_buffer,
+				"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Error reading %s\"}",
+				tmp_path);
+		return false;
+	}
+	return true;
+}
+
+static bool fill_memory_map_A6() {
+	char tmp_str[5];
+	
+	if (!InitBatteryDir()) {
+		return false;
+	}
+	float ftmp;
+	// Rsense
+	if (!read_A6_value("getrsense")) return false;
+	sscanf(read_file_buffer,"%d",&MemoryMap.rsense);
+	// Age
+	if (!read_A6_value("getage")) return false;
+	sscanf(read_file_buffer,"%f",&ftmp);
+	MemoryMap.age=(double)ftmp;
+	// Full40
+	if (!read_A6_value("getfull40")) return false;
+	sscanf(read_file_buffer,"%f",&ftmp);
+	MemoryMap.full40=(double)ftmp;
+	// Temp
+	if (!read_A6_value("gettemp")) return false;
+	sscanf(read_file_buffer,"%d",&MemoryMap.temp);
+	// Voltage
+	if (!read_A6_value("getvoltage")) return false;
+	sscanf(read_file_buffer,"%ld",&MemoryMap.voltage);
+	// Current
+	if (!read_A6_value("getcurrent")) return false;
+	sscanf(read_file_buffer,"%ld",&MemoryMap.current);
+	// Average Current
+	if (!read_A6_value("getavgcurrent")) return false;
+	sscanf(read_file_buffer,"%ld",&MemoryMap.avgcurrent);
+	// Rarc
+	if (!read_A6_value("getpercent")) return false;
+	sscanf(read_file_buffer,"%d",&MemoryMap.percent);
+	// coulomb
+	if (!read_A6_value("getcoulomb")) return false;
+	sscanf(read_file_buffer,"%f",&ftmp);
+	MemoryMap.coulomb=(double)ftmp;
+	// Status Register
+	strcpy(MemoryMap.strPORF,  "false");
+	strcpy(MemoryMap.strCHGTF, "false");
+	strcpy(MemoryMap.strAEF,   "false");
+	strcpy(MemoryMap.strSEF,   "false");	
+	strcpy(MemoryMap.strLEARNF,"false");
+	strcpy(MemoryMap.strUVF,   "false");
+	// Status Register
+	MemoryMap.vae=0.0;
+	
 	return true;
 }
 
@@ -589,6 +679,11 @@ static bool write_register(unsigned short reg, unsigned short value) {
 	if (!InitBatteryDir()) {
 		return false;
 	}
+	if (FuelgaugeIC != MAXIM_DS2784) {
+		sprintf(error_file_buffer,
+				"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Unsupported\"}");
+		return false;
+	}
 	if (reg > 255) {
 		sprintf(error_file_buffer,
 				"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Invalid Register %d\"}",reg);
@@ -643,8 +738,15 @@ static bool fill_dumpreg() {
 }
 
 bool read_battery(){
-	if (!fill_dumpreg()) return false;
-	if (!fill_memory_map()) return false;
+	if (!InitBatteryDir()) {
+		return false;
+	}
+	if (FuelgaugeIC == MAXIM_DS2784) {
+		if (!fill_dumpreg()) return false;
+		if (!fill_memory_map()) return false;
+	} else if (FuelgaugeIC == A6) {
+		if (!fill_memory_map_A6()) return false;
+	} else return false;
 	return true;
 }
 
@@ -695,7 +797,8 @@ bool ReadBatteryShort_method(LSHandle* lshandle, LSMessage *message, void *ctx) 
 	
 	//return read_file(lshandle, message, filename, false);
 	sprintf(read_file_buffer,
-			"{\"returnValue\":true,\"errorCode\":0,\"getavgcurrent\":\"%ld\",\"getcoulomb\":\"%f\",\"getcurrent\":\"%ld\",\"getpercent\":\"%d\",\"gettemp\":\"%d\",\"getvoltage\":\"%ld\",\"PORF\":%s,\"UVF\":%s,\"LEARNF\":%s,\"SEF\":%s,\"AEF\":%s,\"CHGTF\":%s,\"VAE\":%f}",
+			"{\"returnValue\":true,\"errorCode\":0,\"FuelgaugeIC\":\"%s\",\"getavgcurrent\":\"%ld\",\"getcoulomb\":\"%f\",\"getcurrent\":\"%ld\",\"getpercent\":\"%d\",\"gettemp\":\"%d\",\"getvoltage\":\"%ld\",\"PORF\":%s,\"UVF\":%s,\"LEARNF\":%s,\"SEF\":%s,\"AEF\":%s,\"CHGTF\":%s,\"VAE\":%f}",
+			MemoryMap.FuelgaugeIC,
 			MemoryMap.avgcurrent,
 			MemoryMap.coulomb,
 			MemoryMap.current,
@@ -757,7 +860,13 @@ bool SetBatteryAGE_method(LSHandle* lshandle, LSMessage *message, void *ctx) {
 		if (!LSMessageReply(lshandle, message, error_file_buffer,&lserror)) goto error;
 		return true;
 	}
-
+	if (FuelgaugeIC != MAXIM_DS2784) {
+		if (!LSMessageReply(lshandle, message,
+							"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Unsupported\"}",
+							&lserror)) goto error;
+		return true;
+	}
+	
 	int iAge = (int)strtol(percentage->child->text,NULL,10);
 	//int iAge = (int)percentage->child->text;
 
@@ -794,6 +903,12 @@ bool ResetBatteryStatusRegister_method(LSHandle* lshandle, LSMessage *message, v
 		return true;
 	}
 	
+	if (FuelgaugeIC != MAXIM_DS2784) {
+		if (!LSMessageReply(lshandle, message,
+							"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Unsupported\"}",
+							&lserror)) goto error;
+		return true;
+	}
 	if (!write_register(STATUS_REGISTER,0)) {
 		if (!LSMessageReply(lshandle, message, error_file_buffer,&lserror)) goto error;
 		return true;
@@ -832,6 +947,12 @@ bool SetBatteryFULL40_method(LSHandle* lshandle, LSMessage *message, void *ctx) 
 		return true;
 	}
 
+	if (FuelgaugeIC != MAXIM_DS2784) {
+		if (!LSMessageReply(lshandle, message,
+							"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Unsupported\"}",
+							&lserror)) goto error;
+		return true;
+	}
 	if ((iCapacity < 500) || (iCapacity > 5000)) {
 		sprintf(error_file_buffer,"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Invalid capacity %d\"}",iCapacity);
 		if (!LSMessageReply(lshandle, message,
@@ -887,6 +1008,12 @@ bool SetBatteryRegister_method(LSHandle* lshandle, LSMessage *message, void *ctx
 		return true;
 	}
 
+	if (FuelgaugeIC != MAXIM_DS2784) {
+		if (!LSMessageReply(lshandle, message,
+							"{\"returnValue\": false, \"errorCode\": -1, \"errorText\": \"Unsupported\"}",
+							&lserror)) goto error;
+		return true;
+	}
 	if (strcmp(name->child->text,"VAE") == 0){
 		int iValue = (int)strtol(value->child->text,NULL,10);
 		//int iAge = (int)percentage->child->text;

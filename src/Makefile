@@ -13,9 +13,9 @@ drbattery: drbattery.o luna_service.o luna_methods.o
 
 install: drbattery
 #	- ssh root@webos killall de.somline.drbattery
-	scp drbattery root@palm:/var/usr/sbin/de.somline.drbattery.new
-	ssh root@palm mv /var/usr/sbin/de.somline.drbattery.new /var/usr/sbin/de.somline.drbattery
-	ssh root@palm killall de.somline.drbattery
+	scp drbattery root@palm2:/var/usr/sbin/de.somline.drbattery.new
+	ssh root@palm2 mv /var/usr/sbin/de.somline.drbattery.new /var/usr/sbin/de.somline.drbattery
+	ssh root@palm2 killall de.somline.drbattery
 #	novacom put file://home/root/drbattery < drbattery
 
 clobber:

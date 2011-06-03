@@ -52,14 +52,14 @@ CalibrateAssistant.prototype.setup = function() {
 		visible: true,
 		items: [
 			Mojo.Menu.editItem,
-			{ label: 'Start Voltage', toggleCmd: 'vae3413', 
+			{ label: 'Start Voltage', toggleCmd: 'vae3413', disabled: true, 
 				items: [ 
-							{label: '3.413V', command: 'vae3413'},
-							{label: '3.432V', command: 'vae3432'},
-							{label: '3.452V', command: 'vae3452'}
+							{label: '3.413V', command: 'vae3413', disabled: true},
+							{label: '3.432V', command: 'vae3432', disabled: true},
+							{label: '3.452V', command: 'vae3452', disabled: true}
 				]
 			},
-    		{ label: "Reset Health", command: 'cmdHealthReset' },
+    		{ label: "Reset Health", command: 'cmdHealthReset', disabled: true },
     		{ label: "Help", command: 'cmdHelp' }
 		]
 	};
@@ -132,20 +132,13 @@ CalibrateAssistant.prototype.UpdateStatus = function(jsonBatteryStatus) {
 			}*/
 		}else{
 			this.LedOff('LEARNF');
-			if ((this.IsCalibrating=="true") && (jsonBatteryStatus.CHGTF)) {
-				this.NotifyUser("CalibrationSuccess");
-				this.IsCalibrating="CalibrationSuccess";	
-			}else if ((this.IsCalibrating=="true")||(this.IsCalibrating=="waiting")){
-				this.NotifyUser("CalibrationFailed");
-				this.IsCalibrating="CalibrationFailed";	
-			}//else if (this.BatteryInfo.getcoulomb < 70) {
-                //Mojo.Controller.getAppController().showBanner({messageText: 'ACR bumped'}, {},'');            
-                //this.AdjustBatteryRegister("ACR",this.BumpACR,false);
-                //}
-            //if ((this.BatteryInfo.getvoltage <= this.VAEStopPowerd) && (this.PowerRunning == "true"))
-            //    this.PowerdCmd("stop");
-            //    this.PowerdRunning="false";
-            //}
+            if ((this.IsCalibrating=="true") && (jsonBatteryStatus.CHGTF)) {
+                this.NotifyUser("CalibrationSuccess");
+                this.IsCalibrating="CalibrationSuccess";	
+            }else if ((this.IsCalibrating=="true")||(this.IsCalibrating=="waiting")){
+                this.NotifyUser("CalibrationFailed");
+                this.IsCalibrating="CalibrationFailed";	
+            }
 		}
 		if (jsonBatteryStatus.UVF) {
 			this.ClearBatteryStatusReg("UVF");
@@ -159,6 +152,12 @@ CalibrateAssistant.prototype.UpdateStatus = function(jsonBatteryStatus) {
 		}else{
 			this.LedOff('PORF');
 		}
+        if (this.BatteryInfo.FuelgaugeIC == "MAXIM_DS2784") {
+            this.appMenuModel.items[1].items[0].disabled=false;
+            this.appMenuModel.items[1].items[1].disabled=false;
+            this.appMenuModel.items[1].items[2].disabled=false;
+            this.appMenuModel.items[2].disabled=false;
+        }
 	} catch (err) {
 		Mojo.Log.error("CalibrateAssistant.prototype.UpdateStatus", err);
 		Mojo.Controller.errorDialog(err);
@@ -197,7 +196,15 @@ CalibrateAssistant.prototype.NotifyUser=function(calibratingStatus){
 			case "Charging":
 				this.HidePopUp();
 				strStatus ="charging";
-				$("info_text").update("To start calibration please disconnect charger");
+				if (this.BatteryInfo != null){
+                    if (this.BatteryInfo.FuelgaugeIC == "MAXIM_DS2784") {
+                        $("info_text").update("To start calibration please disconnect charger");
+                    } else {
+                        $("info_text").update("Calibration not yet supported on this device");
+                    }
+				} else {
+                    this.LastNotifyMessage="";
+                }
 				//if (this.IsFirstCall=="false") {
 					//Mojo.Log.error("Notify ShowBanner: " + calibratingStatus + "First: " + this.IsFirstCall);
 				//	Mojo.Controller.getAppController().showBanner({messageText: 'Please disconnect charger'}, {},'');
@@ -207,7 +214,11 @@ CalibrateAssistant.prototype.NotifyUser=function(calibratingStatus){
 				this.HidePopUp();
 				strStatus="discharging";
 				if (this.BatteryInfo != null){
-					$("info_text").update("Waiting for battery enter calibration mode at " + (this.BatteryInfo.VAE/1000).toFixed(3) + "V");
+                    if (this.BatteryInfo.FuelgaugeIC == "MAXIM_DS2784") {
+                        $("info_text").update("Waiting for battery enter calibration mode at " + (this.BatteryInfo.VAE/1000).toFixed(3) + "V");
+                    } else {
+                        $("info_text").update("Calibration not yet supported on this device");
+                    }
 				} else {
                     this.LastNotifyMessage="";
                 }
@@ -343,29 +354,31 @@ CalibrateAssistant.prototype.ClearBatteryStatusReg = function(Register) {
 
 CalibrateAssistant.prototype.AdjustBatteryRegister = function(register,value,showsuccess) {
 	try{
-		this.controller.serviceRequest('palm://de.somline.drbattery', {
-			method: 'SetBatteryRegister',
-			parameters: {'name':register, 'value':value}, 
-			onSuccess: function(response) {
-				//this.BatteryInfo=response;
-				//this.UpdateView(this.BatteryInfo);
-				//Mojo.Controller.getAppController().showBanner("VAE set to: " + value/1000 + "V", "","Information");
-				if (showsuccess) {
-		            this.controller.showAlertDialog({
-		                onChoose: function(value) {},
-		                title: $L("Register successfully set"),
-		                message: $L(register + " set to: " + value),
-		                choices:[
-		                    {label:$L('OK'), value:"ok", type:'dismiss'}
-		                ]
-		            });
-				}
-			}.bind(this),
-			onFailure: function(err) {
-				Mojo.Log.error(Object.toJSON(err));
-				Mojo.Controller.errorDialog(err.errorText);
-			}.bind(this)
-		});
+        this.controller.serviceRequest('palm://de.somline.drbattery', {
+            method: 'SetBatteryRegister',
+            parameters: {'name':register, 'value':value}, 
+            onSuccess: function(response) {
+                //this.BatteryInfo=response;
+                //this.UpdateView(this.BatteryInfo);
+                //Mojo.Controller.getAppController().showBanner("VAE set to: " + value/1000 + "V", "","Information");
+                if (showsuccess) {
+                    this.controller.showAlertDialog({
+                        onChoose: function(value) {},
+                        title: $L("Register successfully set"),
+                        message: $L(register + " set to: " + value),
+                        choices:[
+                            {label:$L('OK'), value:"ok", type:'dismiss'}
+                        ]
+                    });
+                }
+            }.bind(this),
+            onFailure: function(err) {
+                if (err.errorText != "Unsupported") {
+                    Mojo.Log.error(Object.toJSON(err));
+                    Mojo.Controller.errorDialog(err.errorText);
+                }
+            }.bind(this)
+        });
 	} catch (err) {
 		Mojo.Log.error("CalibrateAssistant.prototype.AdjustBatteryRegister", err);
 		Mojo.Controller.errorDialog(err);
