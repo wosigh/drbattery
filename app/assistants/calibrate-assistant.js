@@ -41,9 +41,9 @@ CalibrateAssistant.prototype.setup = function() {
                       //{ icon:'health_icon',command: "health" },
                       //{ icon:'calibrate_icon', command: "calibrate" },
                       //{ icon:'advanced_icon', command: "advanced" }
-                      { label: $L("Actual"), command: "actual" },
+                      { label: $L("Actual"), command: "actual", expand:true },
                       { label: $L("Health"), command: "health", expand:true },
-                      { label: $L("Calibrate"), command: "calibrate", expand:true }
+                      { label: $L("Calibr."), command: "calibrate", expand:true }
                   ]}
             	]
             }

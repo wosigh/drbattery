@@ -9,6 +9,16 @@
 	padding: 10px 0px 0px 5px;
 	float:left;
 }
+.backIcon {
+	position:absolute;
+	left:10px;
+	top:2px;
+	width:32px;
+	height:32px;
+	background:url(../images/back-pill.png) no-repeat center ;
+	padding: 10px 0px 0px 5px;
+	float:left;
+}
 .img_web
 {
 	position:relative;
@@ -79,17 +89,17 @@ text-transform: none;
 	left:49px;
 }
 .actual_icon {
-    background-position: center;
+    background-position: left;
     background-image: url('../images/actual2_icon.png');
     background-repeat: no-repeat;
 }
 .health_icon {
-    background-position: center;
+    background-position: left;
     background-image: url('../images/health_icon.png');
     background-repeat: no-repeat;
 }
 .calibrate_icon {
-    background-position: center;
+    background-position: left;
     background-image: url('../images/calibrate_icon.png');
     background-repeat: no-repeat;
 }
@@ -154,7 +164,7 @@ color:#AAA;
 /*Percentage Text*/
 #health_percentage {
 	font-size: 250%;
-	text-align:right;
+	text-align:left;
 	margin: 15px 0 0 0;
 	}
 /*Percentage Text*/
@@ -220,28 +230,30 @@ color:#AAA;
 	font-size: 90%;
 }
 .txt_healthmonitor{
-	font-size: 130%;
+        padding: 0px 15px 0px;
+	font-size: 110%;
 }
 #full40{
 	text-align:right;
-	align:right;
+	align:left;
 	padding: 0 -10 0 -10;	
 }
 #full40 .palm-textfield-disabled{
 	color:#FFF;
-	text-align:right;
-	align:right;
+	text-align:left;
+	align:left;
 	padding: 0 -10 0 -10;	
 }
 
 #full40 input:focus{
 	font-size: 100%;
 	height:30px;
-	text-align:right;
-	align:right;
+	text-align:left;
+	align:left;
 }
    
 .txt_healthmah{
+        padding: 0px 15px 0px;
 	font-size: 130%;
 	text-align:left;
 	align:left;
@@ -267,16 +279,16 @@ color:#AAA;
 
 #grp_healthfull40{
 	height:30px;
-	font-size: 130%;
-	text-align:center;
-	align:center;
+	font-size: 110%;
+	text-align:left;
+	align:left;
 }
 
 #grp_healthpercent{
-	font-size: 240%;
+	font-size: 230%;
 	height:60px;
-	text-align:right;
-	align:right;
+	text-align:left;
+	align:left;
 }
 .head_healthmonitor{
 	color:#AAA;

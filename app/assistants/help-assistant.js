@@ -7,6 +7,10 @@ function HelpAssistant() {
 
 HelpAssistant.prototype.setup = function()
 {
+        // setup back tap
+        this.backElement = this.controller.get('backIcon');
+        this.backTapHandler = this.backTap.bindAsEventListener(this);
+        this.controller.listen(this.backElement, Mojo.Event.tap, this.backTapHandler);
     
 	//this.controller.get('help-title').innerHTML = $L("Help");
 	this.controller.get('help-support').innerHTML = $L("Support");
@@ -99,9 +103,15 @@ HelpAssistant.prototype.listTapHandler = function(event)
 	}
 };
 
+HelpAssistant.prototype.backTap = function(event)
+{                          
+        this.controller.stageController.popScene();
+};                       
+
 HelpAssistant.prototype.activate = function(event) {};
 HelpAssistant.prototype.deactivate = function(event) {};
 HelpAssistant.prototype.cleanup = function(event)
 {
+        this.controller.stopListening(this.backElement,  Mojo.Event.tap, this.backTapHandler);
 	this.controller.stopListening('supportList', Mojo.Event.listTap, this.listTapHandler.bindAsEventListener(this));
 };

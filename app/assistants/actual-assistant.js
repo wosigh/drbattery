@@ -23,14 +23,15 @@ ActualAssistant.prototype.setup = function() {
                 { label: "command",
                   toggleCmd: "actual",
                   items:[
-                      { label: $L("Actual"), command: "actual" },
+                      { label: $L("Actual"), command: "actual", expand:true },
                       { label: $L("Health"), command: "health", expand:true },
-                      { label: $L("Calibrate"), command: "calibrate", expand:true }
+                      { label: $L("Calibr."), command: "calibrate", expand:true }
                   ]}
             	]
             }
     );
 /*
+
    this.controller.setupWidget(Mojo.Menu.commandMenu,
         this.attributes = {
             spacerHeight: 0,
@@ -74,6 +75,9 @@ ActualAssistant.prototype.setup = function() {
 	//this.Init();
 	this.Update();
 	this.updater=setInterval(this.Update.bind(this),30000);
+	if (this.controller.stageController.setWindowOrientation) {
+	  this.controller.stageController.setWindowOrientation("free");
+	}
 };
 ActualAssistant.prototype.Init=function(){
 	try {

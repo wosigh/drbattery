@@ -9,6 +9,7 @@
 	"release_date": "02-Jun-2011",
 	"vendor_email": "drbattery@somline.de",
 	"copyright": "&copy; Copyright 2011, somline",
+"uiRevision": "2",
 	"theme": "dark",
 	"support": {
 		"resources": [

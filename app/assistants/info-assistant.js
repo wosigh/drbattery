@@ -15,6 +15,11 @@ InfoAssistant.prototype.setup = function() {
 	/* use Mojo.View.render to render view templates and add them to the scene, if needed */
 	
 	/* setup widgets here */
+
+        // setup back tap     
+        this.backElement = this.controller.get('backIcon');
+        this.backTapHandler = this.backTap.bindAsEventListener(this);
+        this.controller.listen(this.backElement, Mojo.Event.tap, this.backTapHandler);
 	
 	/* add event handlers to listen to events from widgets */
 	switch (this.PusherScene) {
@@ -28,13 +33,18 @@ InfoAssistant.prototype.setup = function() {
 			$('message').innerHTML='<h2>Calibrate</h2>Here you can recalibrate the chip inside the battery. This will calculate the actual capacity of your battery and set the percentage accordingly. The discharging and charging cycle may take some time, and you need to connect the charger at a certain time within 30-60 second time to begin the learning cycle. To reduce the temperature during charge its suggestive to slide open a pre.<br>While discharging/calibrating you can use the device running other apps. But it should not "fall to sleep". Running this scene in foreground prevents the device from sleeping<br><b>If the calibration fails you may try to set the health to 100% or change the voltage when calibrating starts from the appmenu. More info below.</b><br>Infos about the "Battery Status Register" can be found in the manual of the "Fuel Gauge IC" in the help scene.<h3>First step: Discharging</h3>Recalibration starts by discharging the battery until a very low state (default 3.413V changeable in the appmenu). So the first thing you have to do is disconnect the charger. Its best to start the recalibrating with a battery at a low charge level (e.g., 10-20%). Otherwise it will take a long time to discharge the battery. As soon the required voltage is reached the battery will switch into calibration (learning; LED: LEARNF will turn on) mode and you have to connect the charger immediately. The app will inform you with an alarm, dialog and text in the screen. Again: You have approximately 30-60 seconds to do so before the device will shutdown. Be patient: After connecting the charger it takes 10-15 seconds until the battery starts calibration.<h3>Second step: Calibrating</h3>Now the calibrating starts. Dont disconnect the charger now, not even for a second, as this will stop the calibration and you get an error from the app. When the calibration is finished, you will get a notification by alarm, banner and info text. After successfully calibrating, the percentage is corrected to reflect the real capacity of your battery. You can examine this in the "Health" scene.<h3>There are some situations where the recalibration fails.</h3><h4>1. Before you could connect the charger webOS shuts down.</h4>You can change the starting voltage to a higher number in the appmenu.<h4>2. Immediately when you connect the charger the calibration stops.</h4>The cause of this is still unknown. You can try to take the battery out of the device for a couple of seconds and retry the calibration.<h4>3. The device (webOS) stops the calibration.</h4>Even though the battery has a very sophisticated mechanism to prevent the battery from over charging, webOS has its own mechanism in case of a battery fault. This means that your battery knows that it can still charge but webOS stops it. <b>You can reset the health to 100% (like a new battery) in the appmenu. After resetting the health to 100% you should recalibrate the battery to recalculate the health to the actual value.<br>Switch the device into airplane mode and dont use any other app.</b>';
 		break;
 		case "changelog":
-			$('message').innerHTML='<h2>Change Log</h2><h3>Version 0.1.4</h3><b>Global</b><ul><li>Support A6 Fuelgauge</li></ul><h3>Version 0.1.3</h3><b>Actual Scene</b><ul><li>Temperature in Celsius and Fahrenheit</li></ul><b>Calibrate Scene</b><ul><li>Temperature in Celsius and Fahrenheit</li><li>Robustify calibration</ul><b>Service</b><ul><li>Fixed webOS 2.x bug</li></ul><h3>Version 0.1.2</h3><b>Health Scene</b><ul><li>Tap and hold to change the health value</li><li>Tap and hold to change the Manufacturer Rating (needs secret code to enable)</li></ul><b>Calibrate Scene</b><ul><li>Changing the calibration start voltage possible in appmenu</li><li>Fixed bug alert "connect charger now" doesnt disappear</ul><b>Service</b><ul><li>Rewritten in C and bundled with the app</li><li>All battery values read from the registers instead of driver files</li><li>Bug in SetManufacturer Rating fixed</li></ul><h3>Version 0.1.1</h3><ul><li>Initial public release</li></ul>';
+			$('message').innerHTML='<h2>Change Log</h2><h3>Version 0.1.4</h3><b>Global</b><ul><li>Cometic changes for Pre3 and TouchPad</li></ul><h3>Version 0.1.4</h3><b>Global</b><ul><li>Support A6 Fuelgauge</li></ul><h3>Version 0.1.3</h3><b>Actual Scene</b><ul><li>Temperature in Celsius and Fahrenheit</li></ul><b>Calibrate Scene</b><ul><li>Temperature in Celsius and Fahrenheit</li><li>Robustify calibration</ul><b>Service</b><ul><li>Fixed webOS 2.x bug</li></ul><h3>Version 0.1.2</h3><b>Health Scene</b><ul><li>Tap and hold to change the health value</li><li>Tap and hold to change the Manufacturer Rating (needs secret code to enable)</li></ul><b>Calibrate Scene</b><ul><li>Changing the calibration start voltage possible in appmenu</li><li>Fixed bug alert "connect charger now" doesnt disappear</ul><b>Service</b><ul><li>Rewritten in C and bundled with the app</li><li>All battery values read from the registers instead of driver files</li><li>Bug in SetManufacturer Rating fixed</li></ul><h3>Version 0.1.1</h3><ul><li>Initial public release</li></ul>';
 		break;
 		default: 
 	}
 	this.controller.setupWidget(Mojo.Menu.appMenu, {omitDefaultItems: true}, {visible: false});
 
 };
+
+InfoAssistant.prototype.backTap = function(event)
+{                                                     
+        this.controller.stageController.popScene();                                         
+};                                               
 
 InfoAssistant.prototype.activate = function(event) {
 	/* put in event handlers here that should only be in effect when this scene is active. For
@@ -49,4 +59,5 @@ InfoAssistant.prototype.deactivate = function(event) {
 InfoAssistant.prototype.cleanup = function(event) {
 	/* this function should do any cleanup needed before the scene is destroyed as 
 	   a result of being popped off the scene stack */
+        this.controller.stopListening(this.backElement,  Mojo.Event.tap, this.backTapHandler);
 };

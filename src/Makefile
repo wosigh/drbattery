@@ -1,4 +1,4 @@
-VERSION=0.1.3
+VERSION=0.1.5
 
 # STAGING_DIR=/srv/preware/build/staging/i686
 # CC=/srv/preware/build/toolchain/i686-unknown-linux-gnu/build/i686-unknown-linux-gnu/bin/i686-unknown-linux-gnu-gcc
