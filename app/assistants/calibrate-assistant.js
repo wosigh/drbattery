@@ -200,7 +200,7 @@ CalibrateAssistant.prototype.NotifyUser=function(calibratingStatus){
                     if (this.BatteryInfo.FuelgaugeIC == "MAXIM_DS2784") {
                         $("info_text").update("To start calibration please disconnect charger");
                     } else {
-                        $("info_text").update("Calibration not yet supported on this device");
+                        $("info_text").update("Calibration not supported on this device");
                     }
 				} else {
                     this.LastNotifyMessage="";
